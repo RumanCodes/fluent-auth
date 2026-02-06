@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(./vendor/bin/phpunit:*)",
+      "WebSearch",
+      "WebFetch(domain:developer.wordpress.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:make.wordpress.org)",
+      "WebFetch(domain:miya0001.github.io)",
+      "WebFetch(domain:felix-arntz.me)",
+      "Bash(chmod:*)",
+      "Bash(composer update:*)"
+    ]
+  }
+}

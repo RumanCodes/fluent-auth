@@ -4,11 +4,8 @@
          bootstrap="tests/bootstrap.php"
          backupGlobals="false"
          colors="true"
-         convertErrorsToExceptions="true"
-         convertNoticesToExceptions="true"
-         convertWarningsToExceptions="true"
          verbose="true">
-    
+
     <coverage>
         <include>
             <directory suffix=".php">./app</directory>
@@ -27,16 +24,17 @@
             <file>./app/Views/magic_login/header.php</file>
         </exclude>
     </coverage>
-    
+
     <testsuites>
-        <testsuite name="FluentAuth">
-            <directory>./tests</directory>
+        <testsuite name="Unit">
+            <directory>./tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory>./tests/Integration</directory>
         </testsuite>
     </testsuites>
-    
+
     <php>
-        <env name="WP_TESTS_DIR" value="/tmp/wordpress-tests-lib"/>
-        <env name="WP_CORE_DIR" value="/tmp/wordpress/"/>
         <env name="WP_TESTS_DOMAIN" value="example.org"/>
         <env name="WP_TESTS_EMAIL" value="admin@example.org"/>
         <env name="WP_TESTS_TITLE" value="Test Blog"/>

@@ -5,13 +5,23 @@ namespace FluentAuth\App\Helpers;
 class Helper
 {
     private static $loginMedia = 'web';
+    private static $authSettings = null;
+    private static $socialAuthSettings = null;
+
+    public static function resetStatics()
+    {
+        self::$authSettings = null;
+        self::$socialAuthSettings = null;
+        self::$loginMedia = 'web';
+    }
 
     public static function getAuthSettings()
     {
-        static $settings;
-        if ($settings) {
-            return $settings;
+        if (self::$authSettings) {
+            return self::$authSettings;
         }
+
+        $settings = &self::$authSettings;
 
         $defaults = [
             'disable_xmlrpc'          => 'no',
@@ -231,10 +241,11 @@ class Helper
 
     public static function getSocialAuthSettings($context = 'view')
     {
-        static $settings;
-        if ($settings) {
-            return $settings;
+        if (self::$socialAuthSettings) {
+            return self::$socialAuthSettings;
         }
+
+        $settings = &self::$socialAuthSettings;
 
         $defaults = [
             'enabled'                => 'no',

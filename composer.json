@@ -3,16 +3,15 @@
         "phpstan": "phpstan analyse --memory-limit=1G --error-format=table > phpstan-errors.md",
         "test": "phpunit",
         "test-coverage": "phpunit --coverage-html coverage-report",
-        "test-coverage-clover": "phpunit --coverage-clover coverage.xml"
+        "test-coverage-clover": "phpunit --coverage-clover coverage.xml",
+        "test-setup": "bash bin/install-wp-tests.sh fluent_security_test root '' 127.0.0.1 latest"
     },
     "require-dev": {
         "phpstan/phpstan": "^2.1",
         "szepeviktor/phpstan-wordpress": "^2.0",
         "phpstan/extension-installer": "^1.4",
         "yoast/phpunit-polyfills": "^3.0",
-        "phpunit/phpunit": "^9.5",
-        "mockery/mockery": "^1.5",
-        "brain/monkey": "^2.6"
+        "phpunit/phpunit": "^9.5"
     },
     "autoload-dev": {
         "psr-4": {
