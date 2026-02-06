@@ -3,3 +3,4 @@ dist
 svn
 builds
 vendor
+.phpunit.result.cache
