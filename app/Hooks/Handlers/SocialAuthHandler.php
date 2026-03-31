@@ -50,10 +50,10 @@ class SocialAuthHandler
         }
 
         if (isset($_GET['intent_redirect_to'])) {
-            $redirect = $_GET['intent_redirect_to'];
+            $redirect = sanitize_url($_GET['intent_redirect_to']);
             // check if the url is valid
             if (filter_var($redirect, FILTER_VALIDATE_URL)) {
-                \setcookie('fs_intent_redirect', $_GET['intent_redirect_to'], time() + 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl());  /* expire in 1 hour */
+                \setcookie('fs_intent_redirect', $redirect, time() + 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl());  /* expire in 1 hour */
             }
         }
 
@@ -183,7 +183,7 @@ class SocialAuthHandler
 
         if (is_user_logged_in()) {
             $existingUser = get_user_by('ID', get_current_user_id());
-            if ($existingUser->user_email !== $data['email']) {
+            if ($existingUser->user_email !== $userData['email']) {
                 return new \WP_Error('email_mismatch', __('Your Github email address does not match with your current account email address. Please use the same email address', 'fluent-security'));
             }
         }

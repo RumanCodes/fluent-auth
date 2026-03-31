@@ -18,10 +18,10 @@ composer test-coverage                 # HTML coverage report
 # Static analysis
 composer phpstan                       # PHPStan level 5 (outputs to phpstan-errors.md)
 
-# Frontend build
-npm run dev                            # Development build (Laravel Mix)
-npm run prod                           # Production build
-npm run watch                          # Watch mode
+# Frontend build (Laravel Mix — no npm scripts defined, use npx directly)
+npx mix                                # Development build
+npx mix --production                   # Production build
+npx mix watch                          # Watch mode
 
 # Release build
 sh build.sh --loco --node-build        # Full build for WP.org distribution
@@ -35,13 +35,16 @@ Entry point: `fluent-security.php` — defines constants, registers a custom PSR
 
 ### Namespace & Directory Map
 
-- `FluentAuth\App\Http\Controllers\` — REST API controllers
+- `FluentAuth\App\Http\Controllers\` — REST API controllers (5 controllers: Settings, Logs, SocialAuthApi, SystemEmails, SecurityScan)
 - `FluentAuth\App\Http\routes.php` — All REST endpoint definitions (namespace: `/wp-json/fluent-auth/`)
 - `FluentAuth\App\Services\` — Business logic (AuthService, social auth services, SystemEmailService)
 - `FluentAuth\App\Services\DB\` — Custom fluent query builder wrapping wpdb; accessed via `flsDb()` global
-- `FluentAuth\App\Hooks\Handlers\` — WordPress hook handlers, each with a `register()` method
+- `FluentAuth\App\Hooks\Handlers\` — 12 WordPress hook handlers, each with a `register()` method
 - `FluentAuth\App\Hooks\hooks.php` — Instantiates and registers all handlers
 - `FluentAuth\App\Helpers\` — Helper (settings/utilities), Arr (array ops), Activator (DB migrations), BrowserDetection
+- `FluentAuth\App\Views\` — PHP templates (magic login views, email templates)
+- `src/admin/` — Vue 3 admin SPA (components: Dashboard, Settings, Logs, SocialAuthSettings, AuthCustomizer, ServerMode, SecurityScan, CustomWpEmails)
+- `src/public/` — Public-facing JS (magic_url.js, one_tap.js, login_helper.js, login_customizer.scss)
 
 ### Key Patterns
 
@@ -50,15 +53,15 @@ Entry point: `fluent-security.php` — defines constants, registers a custom PSR
 - **Error handling**: Return `\WP_Error` objects from controllers/services for API errors.
 - **Settings**: Stored in `wp_options` under key `__fls_auth_settings`. Retrieved/managed via `Helper::getAuthSettings()`.
 - **Hook handlers**: Each handler in `app/Hooks/Handlers/` is a class with a `register()` method that hooks into WordPress actions/filters.
-- **Frontend**: Vue 3 + Element Plus + Vue Router, built with Laravel Mix. Admin app bootstraps from `src/admin/app.js` using `window.fluentAuthAdmin` for server-side data. REST calls use mixin methods `$get`, `$post`, `$put`, `$del`.
+- **Frontend**: Vue 3 + Element Plus + Vue Router, built with Laravel Mix. Admin app bootstraps from `src/admin/app.js` using `window.fluentAuthAdmin` for server-side data. REST calls use mixin methods `$get`, `$post`, `$put`, `$del`. Vue i18n via `$t()` mixin method.
 - **i18n text domain**: `'fluent-security'`
 
 ### Testing
 
-Tests run standalone without WordPress via comprehensive mocks in `tests/bootstrap.php` (mocks WP functions, database, REST classes). Test namespace: `FluentAuth\Tests\` (PSR-4 in `autoload-dev`). Unit tests in `tests/Unit/`, integration tests in `tests/Integration/`.
+Tests run standalone without WordPress via comprehensive mocks in `tests/bootstrap.php` (mocks WP functions, database, REST classes). Test namespace: `FluentAuth\Tests\` (PSR-4 in `autoload-dev`). Unit tests in `tests/Unit/`, integration tests in `tests/Integration/`. Mock WordPress classes (WP_Error, WP_REST_Request, WP_User) are in `tests/Unit/MockClasses.php`.
 
 ## Code Style
 
 - **PHP**: PascalCase classes, camelCase methods/variables, UPPER_SNAKE_CASE constants. Follow WordPress coding standards. Sanitize input (`sanitize_text_field`, `sanitize_url`), escape output (`esc_html`, `esc_url`).
-- **Vue/JS**: PascalCase component files, kebab-case in templates. ES6+, async/await. SCSS with BEM naming (`.fframe_app`, `&__body`).
+- **Vue/JS**: PascalCase component files, kebab-case in templates. ES6+, async/await. SCSS with BEM naming (`.fframe_app`, `&__body`). `<script>` before `<template>` before `<style>` in SFCs.
 - **Commits**: Run `composer phpstan` before committing.
