@@ -35,14 +35,15 @@ class WPSystemEmailHandler
          * We will just disable the welcome email by WP
          */
         add_filter('wp_send_new_user_notification_to_user', function ($status, $user) {
-            if (!get_user_meta($user->ID, 'default_password_nag')) {
-                $setting = SystemEmailService::getEmailSettingsByType('user_registration_to_user');
-                if (!$setting || Arr::get($setting, 'status', '') !== 'active') {
-                    return $status;
-                }
-                return false;
+            if (!get_user_meta($user->ID, '_fls_auth_signup', true)) {
+                return $status;
             }
-            return $status;
+
+            $setting = SystemEmailService::getEmailSettingsByType('user_registration_to_user');
+            if (!$setting || Arr::get($setting, 'status', '') !== 'active') {
+                return $status;
+            }
+            return false;
         }, 100, 2);
 
         /*
@@ -83,6 +84,10 @@ class WPSystemEmailHandler
 
     public function maybeAlterUserRegistrationEmail($defaults, $user, $blogname)
     {
+        if (get_user_meta($user->ID, '_fls_auth_signup', true)) {
+            return $defaults;
+        }
+
         $setting = SystemEmailService::getEmailSettingsByType('user_registration_to_user');
 
         if (!$setting || Arr::get($setting, 'status', '') !== 'active') {

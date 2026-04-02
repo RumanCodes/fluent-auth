@@ -250,6 +250,8 @@ class AuthService
 
         do_action('register_new_user', $user_id);
 
+        update_user_meta($user_id, '_fls_auth_signup', '1');
+
         return $user_id;
     }
 
