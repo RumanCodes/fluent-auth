@@ -139,31 +139,33 @@ class PasskeyService
 
     public static function getAuthenticationOptions($login = '')
     {
+        $login = sanitize_text_field($login);
+        if (!$login) {
+            return new \WP_Error('missing_login', __('Please enter your username or email before using passkey login.', 'fluent-security'), ['status' => 422]);
+        }
+
         $challenge = self::randomBase64Url(32);
-        $user = null;
         $allowCredentials = [];
 
-        if ($login) {
-            $user = is_email($login) ? get_user_by('email', $login) : get_user_by('login', sanitize_user($login));
-            if (!$user) {
-                return new \WP_Error('invalid_user', __('No passkey is registered for this account.', 'fluent-security'), ['status' => 422]);
-            }
+        $user = is_email($login) ? get_user_by('email', $login) : get_user_by('login', sanitize_user($login));
+        if (!$user) {
+            return new \WP_Error('invalid_user', __('No passkey is registered for this account.', 'fluent-security'), ['status' => 422]);
+        }
 
-            foreach (PasskeyCredentialRepository::getByUserId($user->ID) as $credential) {
-                $allowCredentials[] = [
-                    'type'       => 'public-key',
-                    'id'         => $credential->credential_id,
-                    'transports' => maybe_unserialize($credential->transports) ?: []
-                ];
-            }
+        foreach (PasskeyCredentialRepository::getByUserId($user->ID) as $credential) {
+            $allowCredentials[] = [
+                'type'       => 'public-key',
+                'id'         => $credential->credential_id,
+                'transports' => maybe_unserialize($credential->transports) ?: []
+            ];
+        }
 
-            if (!$allowCredentials) {
-                return new \WP_Error('no_passkeys', __('No passkey is registered for this account.', 'fluent-security'), ['status' => 422]);
-            }
+        if (!$allowCredentials) {
+            return new \WP_Error('no_passkeys', __('No passkey is registered for this account.', 'fluent-security'), ['status' => 422]);
         }
 
         $token = self::storeChallenge('login', $challenge, [
-            'user_id' => $user ? (int)$user->ID : 0,
+            'user_id' => (int)$user->ID,
             'login'   => $login
         ]);
 

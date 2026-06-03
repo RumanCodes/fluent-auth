@@ -65,6 +65,16 @@ class PasskeyCredentialRepository
             ->first();
     }
 
+    public static function getById($id, $userId)
+    {
+        self::maybeCreateTable();
+
+        return flsDb()->table('fls_passkey_credentials')
+            ->where('id', (int)$id)
+            ->where('user_id', (int)$userId)
+            ->first();
+    }
+
     public static function create($data)
     {
         self::maybeCreateTable();
@@ -98,6 +108,19 @@ class PasskeyCredentialRepository
                 'sign_count'   => (int)$signCount,
                 'last_used_at' => current_time('mysql'),
                 'updated_at'   => current_time('mysql')
+            ]);
+    }
+
+    public static function rename($id, $userId, $name)
+    {
+        self::maybeCreateTable();
+
+        return flsDb()->table('fls_passkey_credentials')
+            ->where('id', (int)$id)
+            ->where('user_id', (int)$userId)
+            ->update([
+                'name'       => sanitize_text_field($name),
+                'updated_at' => current_time('mysql')
             ]);
     }
 

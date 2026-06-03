@@ -150,6 +150,18 @@ document.addEventListener('DOMContentLoaded', function () {
         return field ? field.value : '';
     }
 
+    function focusLoginField(button) {
+        const form = button.closest('form');
+        if (!form) {
+            return;
+        }
+
+        const field = form.querySelector('input[name="log"], #user_login');
+        if (field) {
+            field.focus();
+        }
+    }
+
     function getRedirectValue(button) {
         const form = button.closest('form');
         if (!form) {
@@ -179,6 +191,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const login = getLoginValue(button);
         const redirectTo = getRedirectValue(button);
+
+        if (!login.trim()) {
+            setMessage(button, config.i18n.usernameRequired, 'error');
+            focusLoginField(button);
+            button.disabled = false;
+            return;
+        }
 
         request('fls_passkey_login_options', {
             login
@@ -215,18 +234,45 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        syncPasswordConfirmation(manager, credentials);
+
         if (!credentials || !credentials.length) {
             list.innerHTML = '<p>' + config.i18n.emptyPasskeys + '</p>';
             return;
         }
 
         list.innerHTML = credentials.map((credential) => {
-            const lastUsed = credential.last_used_at ? credential.last_used_at : '-';
+            const lastUsed = credential.last_used_at ? credential.last_used_at : config.i18n.never;
+            const created = credential.created_at ? credential.created_at : '-';
             return '<div class="fls_passkey_item" data-id="' + credential.id + '">'
-                + '<div><strong>' + escapeHtml(credential.name) + '</strong><br><small>Last used: ' + escapeHtml(lastUsed) + '</small></div>'
-                + '<button type="button" class="button fls_passkey_delete" data-id="' + credential.id + '">Remove</button>'
+                + '<div class="fls_passkey_item_details">'
+                + '<strong class="fls_passkey_name">' + escapeHtml(credential.name) + '</strong><br>'
+                + '<small>' + escapeHtml(config.i18n.created) + ': ' + escapeHtml(created) + '</small><br>'
+                + '<small>' + escapeHtml(config.i18n.lastUsed) + ': ' + escapeHtml(lastUsed) + '</small>'
+                + '</div>'
+                + '<div class="fls_passkey_actions">'
+                + '<button type="button" class="button fls_passkey_rename" data-id="' + credential.id + '" data-name="' + escapeAttr(credential.name) + '">' + escapeHtml(config.i18n.rename) + '</button>'
+                + '<button type="button" class="button fls_passkey_delete" data-id="' + credential.id + '">' + escapeHtml(config.i18n.remove) + '</button>'
+                + '</div>'
                 + '</div>';
         }).join('');
+    }
+
+    function syncPasswordConfirmation(manager, credentials) {
+        const confirm = manager ? manager.querySelector('.fls_passkey_confirm') : null;
+        if (!confirm) {
+            return;
+        }
+
+        const hasPasskeys = !!(credentials && credentials.length);
+        confirm.hidden = !hasPasskeys;
+
+        if (!hasPasskeys) {
+            const passwordField = confirm.querySelector('.fls_passkey_current_password, input[name="current_password"]');
+            if (passwordField) {
+                passwordField.value = '';
+            }
+        }
     }
 
     function loadCredentialList(manager) {
@@ -254,12 +300,25 @@ document.addEventListener('DOMContentLoaded', function () {
         button.disabled = true;
         setMessage(button, '', 'success');
 
+        const passkeyName = window.prompt(config.i18n.renamePasskey, '');
+        if (passkeyName === null) {
+            button.disabled = false;
+            return;
+        }
+
+        if (!passkeyName.trim()) {
+            setMessage(button, config.i18n.nameRequired, 'error');
+            button.disabled = false;
+            return;
+        }
+
         request('fls_passkey_register_options').then((options) => {
             const challengeToken = options.challengeToken;
             const publicKey = prepareCreationOptions(options.publicKey);
             return navigator.credentials.create({ publicKey }).then((credential) => {
                 const payload = serializeCredential(credential);
                 payload.challengeToken = challengeToken;
+                payload.name = passkeyName.trim();
 
                 return request('fls_passkey_register_verify', {
                     payload: JSON.stringify(payload)
@@ -270,6 +329,40 @@ document.addEventListener('DOMContentLoaded', function () {
             renderCredentials(manager, response.credentials);
         }).catch((error) => {
             setMessage(button, error.message || config.i18n.registerFailed, 'error');
+        }).finally(() => {
+            button.disabled = false;
+        });
+    }
+
+    function handlePasskeyRename(event) {
+        const button = event.target.closest('.fls_passkey_rename');
+        if (!button) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const manager = button.closest('.fls_passkey_manager');
+        const name = window.prompt(config.i18n.renamePasskey, button.dataset.name || '');
+        if (name === null) {
+            return;
+        }
+
+        if (!name.trim()) {
+            setMessage(button, config.i18n.nameRequired, 'error');
+            return;
+        }
+
+        button.disabled = true;
+
+        request('fls_passkey_rename', {
+            credential_id: button.dataset.id,
+            name: name.trim()
+        }).then((response) => {
+            setMessage(button, response.message, 'success');
+            renderCredentials(manager, response.credentials);
+        }).catch((error) => {
+            setMessage(button, error.message || config.i18n.renameFailed, 'error');
         }).finally(() => {
             button.disabled = false;
         });
@@ -287,12 +380,32 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const manager = button.closest('.fls_passkey_manager');
+        const data = {
+            credential_id: button.dataset.id
+        };
+
+        if (config.delete_requires_password === 'yes') {
+            const passwordField = manager ? manager.querySelector('.fls_passkey_current_password, input[name="current_password"]') : null;
+            const password = passwordField ? passwordField.value : '';
+            if (!password) {
+                setMessage(button, config.i18n.passwordRequired, 'error');
+                if (passwordField) {
+                    passwordField.focus();
+                }
+                return;
+            }
+
+            data.current_password = password;
+        }
+
         button.disabled = true;
 
-        request('fls_passkey_delete', {
-            credential_id: button.dataset.id
-        }).then((response) => {
+        request('fls_passkey_delete', data).then((response) => {
             setMessage(button, response.message, 'success');
+            const passwordField = manager ? manager.querySelector('.fls_passkey_current_password, input[name="current_password"]') : null;
+            if (passwordField) {
+                passwordField.value = '';
+            }
             renderCredentials(manager, response.credentials);
         }).catch((error) => {
             setMessage(button, error.message || config.i18n.registerFailed, 'error');
@@ -305,6 +418,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const div = document.createElement('div');
         div.textContent = value;
         return div.innerHTML;
+    }
+
+    function escapeAttr(value) {
+        return escapeHtml(value).replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
     function addStyles() {
@@ -321,7 +438,12 @@ document.addEventListener('DOMContentLoaded', function () {
             + '.fls_passkey_error{color:#b32d2e;}'
             + '.fls_passkey_success{color:#008a20;}'
             + '.fls_passkey_manager_header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}'
-            + '.fls_passkey_item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #dcdcde;}';
+            + '.fls_passkey_confirm[hidden]{display:none!important;}'
+            + '.fls_passkey_confirm{margin:12px 0;}'
+            + '.fls_passkey_confirm label{display:block;font-weight:600;margin-bottom:4px;}'
+            + '.fls_passkey_item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #dcdcde;}'
+            + '.fls_passkey_item_details{min-width:0;}'
+            + '.fls_passkey_actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}';
         document.head.appendChild(style);
     }
 
@@ -331,6 +453,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelectorAll('.fls_passkey_manager').forEach((manager) => {
         manager.addEventListener('click', handlePasskeyDelete);
+        manager.addEventListener('click', handlePasskeyRename);
 
         const registerButton = manager.querySelector('.fls_passkey_register');
         if (registerButton) {
